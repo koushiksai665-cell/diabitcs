@@ -1,4 +1,14 @@
+---
+title: Diabitcs
+emoji: 🩸
+colorFrom: red
+colorTo: indigo
+sdk: docker
+pinned: false
+---
+
 # AI-Based Diabetes Predictor
+
 
 A diabetes risk screening web application combining a weighted ensemble
 machine learning model (Random Forest + Gradient Boosting) with an
