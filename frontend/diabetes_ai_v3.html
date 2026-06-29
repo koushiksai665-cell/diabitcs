@@ -1,0 +1,1823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aura Diabetes AI - Weighted Ensemble Screening</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <style>
+    :root {
+      --bg-dark: #090d16;
+      --bg-card: rgba(22, 29, 49, 0.65);
+      --bg-card-border: rgba(255, 255, 255, 0.08);
+      --primary: #6366f1;
+      --primary-glow: rgba(99, 102, 241, 0.15);
+      --accent-green: #10b981;
+      --accent-green-glow: rgba(16, 185, 129, 0.2);
+      --accent-orange: #f59e0b;
+      --accent-orange-glow: rgba(245, 158, 11, 0.2);
+      --accent-red: #ef4444;
+      --accent-red-glow: rgba(239, 68, 68, 0.2);
+      
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --text-dark: #4b5563;
+      
+      --transition-speed: 0.3s;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(at 10% 10%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
+        radial-gradient(at 90% 90%, rgba(16, 185, 129, 0.05) 0px, transparent 50%),
+        radial-gradient(at 50% 10%, rgba(239, 68, 68, 0.03) 0px, transparent 40%);
+      background-attachment: fixed;
+      color: var(--text-main);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-dark);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem;
+    }
+
+    /* Header Styling */
+    header {
+      text-align: center;
+      margin-bottom: 3.5rem;
+      animation: fadeInDown 0.8s ease-out;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+      padding: 0.6rem 1.2rem;
+      border-radius: 50px;
+      border: 1px solid var(--bg-card-border);
+      margin-bottom: 1.5rem;
+      backdrop-filter: blur(10px);
+    }
+
+    .brand i {
+      color: var(--primary);
+      filter: drop-shadow(0 0 8px var(--primary));
+    }
+
+    .brand span {
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      background: linear-gradient(to right, #a5b4fc, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2.75rem;
+      font-weight: 800;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+      background: linear-gradient(to right, #ffffff 50%, #d1d5db 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.75rem;
+    }
+
+    .subtitle {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* Grid Layout */
+    .app-layout {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 2.5rem;
+      align-items: start;
+    }
+
+    @media (max-width: 900px) {
+      .app-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Glassmorphism Card base */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--bg-card-border);
+      border-radius: 20px;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      padding: 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Form Card specific styling */
+    .form-card {
+      min-height: 520px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Steps Indicator */
+    .steps-indicator {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+      position: relative;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .step-dot {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      flex: 1;
+      position: relative;
+    }
+
+    .step-dot::after {
+      content: '';
+      position: absolute;
+      top: 15px;
+      left: 50%;
+      width: 100%;
+      height: 2px;
+      background: rgba(255, 255, 255, 0.05);
+      z-index: 1;
+    }
+
+    .step-dot:last-child::after {
+      display: none;
+    }
+
+    .dot {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #111827;
+      border: 2px solid var(--text-dark);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      z-index: 2;
+      transition: all var(--transition-speed);
+    }
+
+    .step-dot.active .dot {
+      border-color: var(--primary);
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 0 12px var(--primary-glow);
+    }
+
+    .step-dot.completed .dot {
+      border-color: var(--accent-green);
+      background: var(--accent-green);
+      color: #ffffff;
+    }
+
+    .step-dot.completed::after {
+      background: var(--accent-green);
+    }
+
+    .step-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      transition: color var(--transition-speed);
+    }
+
+    .step-dot.active .step-label {
+      color: var(--text-main);
+    }
+
+    /* Steps Content */
+    .step-content {
+      display: none;
+      flex-grow: 1;
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    .step-content.active {
+      display: block;
+    }
+
+    .step-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .step-title i {
+      color: var(--primary);
+    }
+
+    .step-desc {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 1.75rem;
+    }
+
+    /* Form Fields */
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .label-wrapper {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    label {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-main);
+    }
+
+    .field-info {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .input-row {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      -webkit-appearance: none;
+      background: rgba(255,255,255,0.06);
+      height: 6px;
+      border-radius: 5px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--primary);
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--primary-glow);
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    input[type="number"] {
+      width: 80px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--bg-card-border);
+      border-radius: 8px;
+      color: #ffffff;
+      padding: 0.4rem 0.6rem;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-align: center;
+      outline: none;
+      transition: border var(--transition-speed);
+    }
+
+    input[type="number"]:focus {
+      border-color: var(--primary);
+    }
+
+    /* Info Tooltip */
+    .field-help {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.35rem;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .field-help i {
+      font-size: 0.8rem;
+    }
+
+    /* DPF Calculator Styling */
+    .dpf-calculator {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px dashed var(--bg-card-border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .dpf-calc-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-bottom: 0.75rem;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .dpf-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    @media (max-width: 500px) {
+      .dpf-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .checkbox-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--bg-card-border);
+      padding: 0.5rem 0.75rem;
+      border-radius: 8px;
+      cursor: pointer;
+      user-select: none;
+      transition: all var(--transition-speed);
+    }
+
+    .checkbox-btn:hover {
+      background: rgba(255,255,255,0.06);
+    }
+
+    .checkbox-btn.checked {
+      background: var(--primary-glow);
+      border-color: var(--primary);
+    }
+
+    .checkbox-btn input[type="checkbox"] {
+      display: none;
+    }
+
+    .checkbox-btn span {
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+
+    .sibling-input {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      grid-column: span 2;
+      background: rgba(255,255,255,0.02);
+      padding: 0.5rem 0.75rem;
+      border-radius: 8px;
+      border: 1px solid var(--bg-card-border);
+    }
+
+    @media (max-width: 500px) {
+      .sibling-input {
+        grid-column: span 1;
+      }
+    }
+
+    .sibling-input label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .sibling-ctrl {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .sib-btn {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 1px solid var(--bg-card-border);
+      background: rgba(255,255,255,0.05);
+      color: #ffffff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    .sib-btn:hover {
+      background: rgba(255,255,255,0.1);
+    }
+
+    .sib-val {
+      font-weight: 700;
+      width: 20px;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+
+    /* Actions Panel */
+    .actions-panel {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 1.5rem;
+      gap: 1rem;
+    }
+
+    .btn {
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      font-size: 0.95rem;
+      padding: 0.75rem 1.5rem;
+      border-radius: 10px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all var(--transition-speed);
+      outline: none;
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+      border: 1px solid var(--bg-card-border);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-secondary:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #ffffff;
+      border: none;
+      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+      margin-left: auto;
+    }
+
+    .btn-primary:hover {
+      background: #4f46e5;
+      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45);
+    }
+
+    /* Info Side Panel / Result Card */
+    .info-card {
+      min-height: 520px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      transition: border-color var(--transition-speed);
+    }
+
+    .info-card.healthy {
+      border-color: rgba(16, 185, 129, 0.4);
+    }
+    .info-card.warning {
+      border-color: rgba(245, 158, 11, 0.4);
+    }
+    .info-card.danger {
+      border-color: rgba(239, 68, 68, 0.4);
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .empty-state i {
+      color: var(--text-dark);
+      font-size: 3.5rem;
+      animation: pulse 2s infinite;
+    }
+
+    .empty-state h3 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 600;
+    }
+
+    .empty-state p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      max-width: 280px;
+      line-height: 1.5;
+    }
+
+    /* Loading state */
+    .loading-state {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      text-align: center;
+    }
+
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(99, 102, 241, 0.1);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s infinite linear;
+    }
+
+    .loading-state p {
+      font-weight: 500;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    /* Result Dashboard styling */
+    .result-dashboard {
+      display: none;
+      width: 100%;
+      animation: fadeInUp 0.6s ease-out;
+    }
+
+    .dashboard-header {
+      text-align: center;
+      margin-bottom: 1.75rem;
+    }
+
+    .dashboard-header h3 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+
+    /* SVG Radial Gauge */
+    .gauge-wrapper {
+      position: relative;
+      width: 180px;
+      height: 180px;
+      margin: 0 auto 1.5rem auto;
+    }
+
+    .gauge-svg {
+      transform: rotate(-90deg);
+      width: 180px;
+      height: 180px;
+    }
+
+    .gauge-track {
+      fill: none;
+      stroke: rgba(255, 255, 255, 0.05);
+      stroke-width: 12;
+    }
+
+    .gauge-fill {
+      fill: none;
+      stroke-width: 12;
+      stroke-linecap: round;
+      stroke-dasharray: 439.8; /* 2 * PI * 70 */
+      stroke-dashoffset: 439.8;
+      transition: stroke-dashoffset 1s ease-out, stroke var(--transition-speed);
+    }
+
+    .gauge-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+
+    .gauge-percentage {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2.2rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .gauge-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.35rem 0.9rem;
+      border-radius: 50px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-top: 0.5rem;
+    }
+
+    .badge-healthy {
+      background: var(--accent-green-glow);
+      color: var(--accent-green);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .badge-warning {
+      background: var(--accent-orange-glow);
+      color: var(--accent-orange);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .badge-danger {
+      background: var(--accent-red-glow);
+      color: var(--accent-red);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    /* Model comparison bars */
+    .model-metrics {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 12px;
+      padding: 1.25rem;
+      border: 1px solid var(--bg-card-border);
+    }
+
+    .metric-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+
+    .model-row {
+      margin-bottom: 1rem;
+    }
+    .model-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .model-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      font-weight: 500;
+      margin-bottom: 0.4rem;
+    }
+
+    .model-name {
+      color: var(--text-main);
+    }
+    .model-val {
+      font-weight: 700;
+    }
+
+    .progress-bar-bg {
+      height: 6px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 5px;
+      width: 0%;
+      transition: width 1.2s cubic-bezier(0.1, 0.8, 0.25, 1);
+    }
+
+    /* 7-Day Plan Section */
+    .plan-section {
+      display: none;
+      grid-column: span 2;
+      margin-top: 1rem;
+      animation: fadeInUp 0.8s ease-out;
+    }
+
+    @media (max-width: 900px) {
+      .plan-section {
+        grid-column: span 1;
+      }
+    }
+
+    .plan-card {
+      padding: 2.5rem;
+      background: linear-gradient(135deg, rgba(22, 29, 49, 0.8) 0%, rgba(13, 17, 30, 0.85) 100%);
+    }
+
+    .plan-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 1.5rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .plan-header-left h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.75rem;
+      font-weight: 800;
+      margin-bottom: 0.4rem;
+      background: linear-gradient(to right, #ffffff, #a5b4fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .plan-header-left p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+      max-width: 700px;
+    }
+
+    .generator-tag {
+      font-size: 0.75rem;
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      color: #a5b4fc;
+      padding: 0.35rem 0.75rem;
+      border-radius: 50px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    /* Tabs Layout */
+    .plan-tabs-layout {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 2rem;
+      align-items: start;
+    }
+
+    @media (max-width: 750px) {
+      .plan-tabs-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Vertical Tab Buttons */
+    .tab-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    @media (max-width: 750px) {
+      .tab-buttons {
+        flex-direction: row;
+        overflow-x: auto;
+        padding-bottom: 0.5rem;
+      }
+    }
+
+    .tab-btn {
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--bg-card-border);
+      padding: 0.8rem 1.2rem;
+      border-radius: 12px;
+      cursor: pointer;
+      text-align: left;
+      transition: all var(--transition-speed);
+      outline: none;
+    }
+
+    @media (max-width: 750px) {
+      .tab-btn {
+        flex-shrink: 0;
+        text-align: center;
+      }
+    }
+
+    .tab-btn:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+    }
+
+    .tab-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+      box-shadow: 0 4px 12px var(--primary-glow);
+    }
+
+    /* Tab Content Grid */
+    .tab-pane {
+      display: none;
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    .tab-pane.active {
+      display: block;
+    }
+
+    .plan-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    /* Diet & Exercise Containers */
+    .pane-card {
+      background: rgba(255, 255, 255, 0.015);
+      border: 1px solid var(--bg-card-border);
+      border-radius: 16px;
+      padding: 1.5rem;
+    }
+
+    .pane-card-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .pane-card-title.diet-title i {
+      color: var(--accent-orange);
+    }
+    .pane-card-title.exercise-title i {
+      color: var(--accent-green);
+    }
+
+    /* Meal Grid */
+    .meal-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+    }
+
+    .meal-item {
+      background: rgba(255, 255, 255, 0.01);
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      border-radius: 12px;
+      padding: 1rem;
+    }
+
+    .meal-time {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.4rem;
+    }
+
+    .meal-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-main);
+      line-height: 1.4;
+    }
+
+    /* Exercise detail */
+    .exercise-box {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      background: rgba(16, 185, 129, 0.04);
+      border: 1px solid rgba(16, 185, 129, 0.1);
+      padding: 1.2rem;
+      border-radius: 12px;
+    }
+
+    .exercise-icon-wrap {
+      width: 44px;
+      height: 44px;
+      background: var(--accent-green-glow);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent-green);
+      flex-shrink: 0;
+    }
+
+    .exercise-desc {
+      font-size: 0.95rem;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+
+    /* Core Pillars Summary list */
+    .pillars-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-top: 2rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      padding-top: 2rem;
+    }
+
+    @media (max-width: 650px) {
+      .pillars-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .pillar-card {
+      background: rgba(255, 255, 255, 0.01);
+      border: 1px solid rgba(255,255,255,0.03);
+      padding: 1.25rem;
+      border-radius: 16px;
+    }
+
+    .pillar-heading {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .pillar-list {
+      list-style: none;
+    }
+
+    .pillar-list li {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 0.5rem;
+      padding-left: 1.2rem;
+      position: relative;
+    }
+
+    .pillar-list li::before {
+      content: '✦';
+      position: absolute;
+      left: 0;
+      color: var(--primary);
+      font-size: 0.8rem;
+    }
+
+    /* Keyframe Animations */
+    @keyframes spin {
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.05); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="brand">
+        <i data-lucide="activity"></i>
+        <span>Aura Diagnostics</span>
+      </div>
+      <h1>Predict Diabetes Risk</h1>
+      <p class="subtitle">Enter patient clinical attributes below. Our weighted machine learning ensemble uses Random Forest and Gradient Boosting models for diagnostic screening.</p>
+    </header>
+
+    <!-- Main Layout Grid -->
+    <div class="app-layout">
+      <!-- Questionnaire Form Card (Left) -->
+      <section class="card form-card">
+        <!-- Steps Progress -->
+        <div class="steps-indicator">
+          <div class="step-dot active" id="step-dot-1">
+            <div class="dot">1</div>
+            <span class="step-label">Basic</span>
+          </div>
+          <div class="step-dot" id="step-dot-2">
+            <div class="dot">2</div>
+            <span class="step-label">Clinical</span>
+          </div>
+          <div class="step-dot" id="step-dot-3">
+            <div class="dot">3</div>
+            <span class="step-label">Physio</span>
+          </div>
+          <div class="step-dot" id="step-dot-4">
+            <div class="dot">4</div>
+            <span class="step-label">Heredity</span>
+          </div>
+        </div>
+
+        <form id="predictor-form">
+          <!-- Step 1: Basic Metrics -->
+          <div class="step-content active" id="step-1">
+            <div class="step-title">
+              <i data-lucide="user"></i>
+              <span>Patient Profile</span>
+            </div>
+            <p class="step-desc">Provide basic demographic metrics about the patient.</p>
+
+            <div class="form-group">
+              <div class="label-wrapper">
+                <label for="age">Age</label>
+                <span class="field-info" id="age-info">30 years</span>
+              </div>
+              <div class="input-row">
+                <input type="range" id="age" min="1" max="100" value="30">
+                <input type="number" id="age-num" min="1" max="100" value="30">
+              </div>
+              <div class="field-help"><i data-lucide="info"></i> <span>Age in years. Risk increases with age.</span></div>
+            </div>
+
+            <div class="form-group">
+              <div class="label-wrapper">
+                <label for="pregnancies">Pregnancies</label>
+                <span class="field-info" id="pregnancies-info">0</span>
+              </div>
+              <div class="input-row">
+                <input type="range" id="pregnancies" min="0" max="20" value="0">
+                <input type="number" id="pregnancies-num" min="0" max="20" value="0">
+              </div>
+              <div class="field-help"><i data-lucide="info"></i> <span>Number of times pregnant (biological female).</span></div>
+            </div>
+          </div>
+
+          <!-- Step 2: Clinical Metrics -->
+          <div class="step-content" id="step-2">
+            <div class="step-title">
+              <i data-lucide="activity"></i>
+              <span>Clinical Metrics</span>
+            </div>
+            <p class="step-desc">Enter the patient's blood pressure and glucose test levels.</p>
+
+            <div class="form-group">
+              <div class="label-wrapper">
+                <label for="glucose">Plasma Glucose Concentration</label>
+                <span class="field-info" id="glucose-info">115 mg/dL</span>
+              </div>
+              <div class="input-row">
+                <input type="range" id="glucose" min="40" max="200" value="115">
+                <input type="number" id="glucose-num" min="40" max="200" value="115">
+              </div>
+              <div class="field-help"><i data-lucide="info"></i> <span>2-hour oral glucose tolerance test value.</span></div>
+            </div>
+
+            <div class="form-group">
+              <div class="label-wrapper">
+                <label for="bloodPressure">Diastolic Blood Pressure</label>
+                <span class="field-info" id="bloodPressure-info">72 mmHg</span>
+              </div>
+              <div class="input-row">
+                <input type="range" id="bloodPressure" min="30" max="130" value="72">
+                <input type="number" id="bloodPressure-num" min="30" max="130" value="72">
+              </div>
+              <div class="field-help"><i data-lucide="info"></i> <span>Diastolic pressure (lower number) in mmHg.</span></div>
+            </div>
+          </div>
+
+          <!-- Step 3: Body & Skin Metrics -->
+          <div class="step-content" id="step-3">
+            <div class="step-title">
+              <i data-lucide="trending-up"></i>
+              <span>Physiological Metrics</span>
+            </div>
+            <p class="step-desc">Enter body mass index and tissue values.</p>
+
+            <div class="form-group">
+              <div class="label-wrapper">
+                <label for="bmi">Body Mass Index (BMI)</label>
+                <span class="field-info" id="bmi-info">28.5</span>
+              </div>
+              <div class="input-row">
+                <input type="range" id="bmi" min="10" max="60" step="0.1" value="28.5">
+                <input type="number" id="bmi-num" min="10" max="60" step="0.1" value="28.5">
+              </div>
+              <div class="field-help"><i data-lucide="info"></i> <span>Weight in kg / (height in m)².</span></div>
+            </div>
+
+            <div class="form-group">
+              <div class="label-wrapper">
+                <label for="skinThickness">Triceps Skin Fold Thickness</label>
+                <span class="field-info" id="skinThickness-info">23 mm</span>
+              </div>
+              <div class="input-row">
+                <input type="range" id="skinThickness" min="5" max="99" value="23">
+                <input type="number" id="skinThickness-num" min="5" max="99" value="23">
+              </div>
+              <div class="field-help"><i data-lucide="info"></i> <span>Skinfold thickness on the arm in mm (used for body fat estimate).</span></div>
+            </div>
+
+            <div class="form-group">
+              <div class="label-wrapper">
+                <label for="insulin">2-Hour Serum Insulin</label>
+                <span class="field-info" id="insulin-info">85 mIU/L</span>
+              </div>
+              <div class="input-row">
+                <input type="range" id="insulin" min="15" max="846" value="85">
+                <input type="number" id="insulin-num" min="15" max="846" value="85">
+              </div>
+              <div class="field-help"><i data-lucide="info"></i> <span>Insulin concentration after oral glucose load (mIU/L).</span></div>
+            </div>
+          </div>
+
+          <!-- Step 4: Heredity / DPF -->
+          <div class="step-content" id="step-4">
+            <div class="step-title">
+              <i data-lucide="heart"></i>
+              <span>Heredity & Family History</span>
+            </div>
+            <p class="step-desc">Calculate the Diabetes Pedigree Function (DPF) by selecting diabetic relatives.</p>
+
+            <div class="dpf-calculator">
+              <div class="dpf-calc-title"><i data-lucide="git-merge"></i> Family History Helper</div>
+              <div class="dpf-grid">
+                <label class="checkbox-btn" id="cb-mother">
+                  <input type="checkbox" id="has-mother">
+                  <i data-lucide="square" class="box-icon"></i>
+                  <span>Mother Has Diabetes</span>
+                </label>
+                <label class="checkbox-btn" id="cb-father">
+                  <input type="checkbox" id="has-father">
+                  <i data-lucide="square" class="box-icon"></i>
+                  <span>Father Has Diabetes</span>
+                </label>
+                
+                <div class="sibling-input">
+                  <label>Diabetic Siblings</label>
+                  <div class="sibling-ctrl">
+                    <button type="button" class="sib-btn" id="sib-dec">-</button>
+                    <span class="sib-val" id="sib-count">0</span>
+                    <button type="button" class="sib-btn" id="sib-inc">+</button>
+                  </div>
+                </div>
+
+                <label class="checkbox-btn" id="cb-mg">
+                  <input type="checkbox" id="has-mg">
+                  <i data-lucide="square" class="box-icon"></i>
+                  <span>Maternal Grandparent</span>
+                </label>
+                <label class="checkbox-btn" id="cb-pg">
+                  <input type="checkbox" id="has-pg">
+                  <i data-lucide="square" class="box-icon"></i>
+                  <span>Paternal Grandparent</span>
+                </label>
+                <label class="checkbox-btn" id="cb-mua">
+                  <input type="checkbox" id="has-mua">
+                  <i data-lucide="square" class="box-icon"></i>
+                  <span>Maternal Aunt/Uncle</span>
+                </label>
+                <label class="checkbox-btn" id="cb-pua">
+                  <input type="checkbox" id="has-pua">
+                  <i data-lucide="square" class="box-icon"></i>
+                  <span>Paternal Aunt/Uncle</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <div class="label-wrapper">
+                <label for="dpf">Diabetes Pedigree Function (DPF)</label>
+                <span class="field-info" id="dpf-info">0.080</span>
+              </div>
+              <div class="input-row">
+                <input type="range" id="dpf" min="0.08" max="2.42" step="0.001" value="0.08">
+                <input type="number" id="dpf-num" min="0.08" max="2.42" step="0.001" value="0.08">
+              </div>
+              <div class="field-help"><i data-lucide="info"></i> <span>Calculated genetic risk factor. Slider overrides helper.</span></div>
+            </div>
+          </div>
+        </form>
+
+        <!-- Navigation Buttons -->
+        <div class="actions-panel">
+          <button class="btn btn-secondary" id="btn-back" disabled><i data-lucide="arrow-left"></i> Back</button>
+          <button class="btn btn-primary" id="btn-next">Next <i data-lucide="arrow-right"></i></button>
+        </div>
+      </section>
+
+      <!-- Results Panel (Right) -->
+      <section class="card info-card" id="display-panel">
+        <!-- Empty State -->
+        <div class="empty-state" id="empty-view">
+          <i data-lucide="shield-alert"></i>
+          <h3>No Diagnosis Performed</h3>
+          <p>Please complete the multi-step questionnaire on the left and submit to view the ensemble screening output.</p>
+        </div>
+
+        <!-- Loading State -->
+        <div class="loading-state" id="loading-view">
+          <div class="spinner"></div>
+          <p>Processing patient clinical vector...</p>
+        </div>
+
+        <!-- Result Dashboard State -->
+        <div class="result-dashboard" id="results-view">
+          <div class="dashboard-header">
+            <h3>Diagnostic Score</h3>
+            <span class="badge" id="risk-badge">Non-Diabetic</span>
+          </div>
+
+          <!-- Gauge Dial -->
+          <div class="gauge-wrapper">
+            <svg class="gauge-svg">
+              <circle class="gauge-track" cx="90" cy="90" r="70"></circle>
+              <circle class="gauge-fill" id="risk-gauge" cx="90" cy="90" r="70"></circle>
+            </svg>
+            <div class="gauge-text">
+              <div class="gauge-percentage" id="risk-percentage">0%</div>
+              <div class="gauge-label">Diabetes Risk</div>
+            </div>
+          </div>
+
+          <!-- Ensemble model split metrics -->
+          <div class="model-metrics">
+            <div class="metric-title"><i data-lucide="cpu" style="display:inline; width:14px; height:14px; vertical-align:middle; margin-right:3px;"></i> Ensemble Models</div>
+            
+            <div class="model-row">
+              <div class="model-labels">
+                <span class="model-name">Random Forest (55% wt)</span>
+                <span class="model-val" id="val-rf">0%</span>
+              </div>
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="bar-rf" style="background-color: var(--primary);"></div>
+              </div>
+            </div>
+
+            <div class="model-row">
+              <div class="model-labels">
+                <span class="model-name">Gradient Boosting (45% wt)</span>
+                <span class="model-val" id="val-gb">0%</span>
+              </div>
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="bar-gb" style="background-color: var(--accent-green);"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7-Day Plan Dashboard Section (Full Width Bottom) -->
+      <section class="card plan-section" id="plan-section">
+        <div class="plan-card">
+          <div class="plan-header">
+            <div class="plan-header-left">
+              <h2 id="plan-title">Personalized Care Plan</h2>
+              <p id="plan-summary">Detailed dietary and physical guidelines generated for this patient's profile.</p>
+            </div>
+            <div class="generator-tag" id="plan-generator-badge">
+              <i data-lucide="sparkles"></i>
+              <span id="plan-generator">Local Rule-Based</span>
+            </div>
+          </div>
+
+          <div class="plan-tabs-layout">
+            <!-- Day Selection Buttons -->
+            <div class="tab-buttons" id="tab-buttons">
+              <!-- JS will inject buttons here -->
+            </div>
+
+            <!-- Diet/Exercise Details Container -->
+            <div class="plan-tabs-content">
+              <div class="tab-pane active">
+                <div class="plan-grid">
+                  <!-- Meals -->
+                  <div class="pane-card">
+                    <div class="pane-card-title diet-title">
+                      <i data-lucide="apple"></i>
+                      <span>Diet & Nutrition</span>
+                    </div>
+                    <div class="meal-grid">
+                      <div class="meal-item">
+                        <div class="meal-time">Breakfast</div>
+                        <div class="meal-name" id="meal-breakfast">-</div>
+                      </div>
+                      <div class="meal-item">
+                        <div class="meal-time">Lunch</div>
+                        <div class="meal-name" id="meal-lunch">-</div>
+                      </div>
+                      <div class="meal-item">
+                        <div class="meal-time">Snack</div>
+                        <div class="meal-name" id="meal-snack">-</div>
+                      </div>
+                      <div class="meal-item">
+                        <div class="meal-time">Dinner</div>
+                        <div class="meal-name" id="meal-dinner">-</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Exercise -->
+                  <div class="pane-card">
+                    <div class="pane-card-title exercise-title">
+                      <i data-lucide="dumbbell"></i>
+                      <span>Exercise & Fitness</span>
+                    </div>
+                    <div class="exercise-box">
+                      <div class="exercise-icon-wrap">
+                        <i data-lucide="heart-pulse"></i>
+                      </div>
+                      <div class="exercise-desc" id="exercise-activity">
+                        No activity specified.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- General Pillars/Tips -->
+          <div class="pillars-grid">
+            <div class="pillar-card">
+              <div class="pillar-heading" style="color: var(--accent-orange);">
+                <i data-lucide="salad" style="width: 18px; height: 18px; margin-right: 4px;"></i> Dietary Pillars
+              </div>
+              <ul class="pillar-list" id="diet-pillars-list">
+                <!-- JS will inject tips here -->
+              </ul>
+            </div>
+
+            <div class="pillar-card">
+              <div class="pillar-heading" style="color: var(--accent-green);">
+                <i data-lucide="trophy" style="width: 18px; height: 18px; margin-right: 4px;"></i> Fitness Pillars
+              </div>
+              <ul class="pillar-list" id="exercise-pillars-list">
+                <!-- JS will inject tips here -->
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    // Initialize icons
+    lucide.createIcons();
+
+    // App state
+    let currentStep = 1;
+    const totalSteps = 4;
+    const API_BASE = "http://localhost:5000";
+    let activePlanSchedule = null;
+
+    // Form inputs and display synchronization
+    const inputs = [
+      { id: 'age', scale: 0, suffix: ' years' },
+      { id: 'pregnancies', scale: 0, suffix: '' },
+      { id: 'glucose', scale: 0, suffix: ' mg/dL' },
+      { id: 'bloodPressure', scale: 0, suffix: ' mmHg' },
+      { id: 'bmi', scale: 1, suffix: '' },
+      { id: 'skinThickness', scale: 0, suffix: ' mm' },
+      { id: 'insulin', scale: 0, suffix: ' mIU/L' },
+      { id: 'dpf', scale: 3, suffix: '' }
+    ];
+
+    inputs.forEach(input => {
+      const slider = document.getElementById(input.id);
+      const numberInput = document.getElementById(input.id + '-num');
+      const infoSpan = document.getElementById(input.id + '-info');
+
+      function updateValue(val) {
+        let value = parseFloat(val);
+        if (isNaN(value)) return;
+        
+        // Format
+        value = value.toFixed(input.scale);
+        
+        slider.value = value;
+        numberInput.value = value;
+        
+        if (infoSpan) {
+          infoSpan.textContent = value + input.suffix;
+        }
+
+        if (input.id === 'dpf') {
+          // Keep helper checkboxes in sync if slider is dragged manually
+          // (No strict syncing backward, but we show user the new DPF)
+        }
+      }
+
+      slider.addEventListener('input', (e) => updateValue(e.target.value));
+      numberInput.addEventListener('input', (e) => updateValue(e.target.value));
+    });
+
+    // DPF Calculator Logic
+    const dpfChecks = [
+      { id: 'has-mother', val: 0.15, cbId: 'cb-mother' },
+      { id: 'has-father', val: 0.12, cbId: 'cb-father' },
+      { id: 'has-mg', val: 0.06, cbId: 'cb-mg' },
+      { id: 'has-pg', val: 0.05, cbId: 'cb-pg' },
+      { id: 'has-mua', val: 0.04, cbId: 'cb-mua' },
+      { id: 'has-pua', val: 0.03, cbId: 'cb-pua' }
+    ];
+
+    let siblingCount = 0;
+
+    // Checkbox custom UI toggling
+    dpfChecks.forEach(item => {
+      const input = document.getElementById(item.id);
+      const label = document.getElementById(item.cbId);
+      
+      input.addEventListener('change', () => {
+        if (input.checked) {
+          label.classList.add('checked');
+          label.querySelector('.box-icon').setAttribute('data-lucide', 'check-square');
+        } else {
+          label.classList.remove('checked');
+          label.querySelector('.box-icon').setAttribute('data-lucide', 'square');
+        }
+        lucide.createIcons({ nameAttr: 'data-lucide' });
+        recalcDPF();
+      });
+    });
+
+    // Sibling increment/decrement
+    const sibVal = document.getElementById('sib-count');
+    document.getElementById('sib-dec').addEventListener('click', () => {
+      if (siblingCount > 0) {
+        siblingCount--;
+        sibVal.textContent = siblingCount;
+        recalcDPF();
+      }
+    });
+
+    document.getElementById('sib-inc').addEventListener('click', () => {
+      if (siblingCount < 10) {
+        siblingCount++;
+        sibVal.textContent = siblingCount;
+        recalcDPF();
+      }
+    });
+
+    function recalcDPF() {
+      let score = 0.08; // Baseline DPF score for no family history
+      
+      dpfChecks.forEach(item => {
+        const input = document.getElementById(item.id);
+        if (input.checked) {
+          score += item.val;
+        }
+      });
+      
+      score += siblingCount * 0.08;
+      
+      // Cap at 2.42 (upper limit in Pima Indians dataset)
+      score = Math.min(2.42, Math.max(0.08, score));
+      
+      // Update DPF inputs
+      const slider = document.getElementById('dpf');
+      const numberInput = document.getElementById('dpf-num');
+      const infoSpan = document.getElementById('dpf-info');
+      
+      const formatted = score.toFixed(3);
+      slider.value = formatted;
+      numberInput.value = formatted;
+      infoSpan.textContent = formatted;
+    }
+
+    // Wizard Navigation Logic
+    const btnBack = document.getElementById('btn-back');
+    const btnNext = document.getElementById('btn-next');
+
+    btnNext.addEventListener('click', () => {
+      if (currentStep < totalSteps) {
+        // Leave current step
+        document.getElementById(`step-${currentStep}`).classList.remove('active');
+        document.getElementById(`step-dot-${currentStep}`).classList.add('completed');
+        document.getElementById(`step-dot-${currentStep}`).classList.remove('active');
+        
+        // Enter next step
+        currentStep++;
+        document.getElementById(`step-${currentStep}`).classList.add('active');
+        document.getElementById(`step-dot-${currentStep}`).classList.add('active');
+        
+        // Sync Buttons
+        btnBack.removeAttribute('disabled');
+        if (currentStep === totalSteps) {
+          btnNext.innerHTML = 'Calculate <i data-lucide="check"></i>';
+          btnNext.classList.add('btn-primary');
+          lucide.createIcons();
+        }
+      } else {
+        // Trigger submit
+        submitPrediction();
+      }
+    });
+
+    btnBack.addEventListener('click', () => {
+      if (currentStep > 1) {
+        // Leave current step
+        document.getElementById(`step-${currentStep}`).classList.remove('active');
+        document.getElementById(`step-dot-${currentStep}`).classList.remove('active');
+        
+        // Enter previous step
+        currentStep--;
+        document.getElementById(`step-${currentStep}`).classList.add('active');
+        document.getElementById(`step-dot-${currentStep}`).classList.remove('completed');
+        document.getElementById(`step-dot-${currentStep}`).classList.add('active');
+        
+        // Sync Buttons
+        if (currentStep === 1) {
+          btnBack.setAttribute('disabled', 'true');
+        }
+        btnNext.innerHTML = 'Next <i data-lucide="arrow-right"></i>';
+        btnNext.classList.remove('btn-primary');
+        lucide.createIcons();
+      }
+    });
+
+    // API Submit prediction
+    async function submitPrediction() {
+      // Toggle views
+      document.getElementById('empty-view').style.display = 'none';
+      document.getElementById('results-view').style.display = 'none';
+      document.getElementById('plan-section').style.display = 'none';
+      document.getElementById('loading-view').style.display = 'flex';
+      
+      const displayPanel = document.getElementById('display-panel');
+      displayPanel.className = 'card info-card'; // reset theme classes
+
+      // Collect data
+      const data = {
+        Pregnancies: parseInt(document.getElementById('pregnancies').value),
+        Glucose: parseFloat(document.getElementById('glucose').value),
+        BloodPressure: parseFloat(document.getElementById('bloodPressure').value),
+        SkinThickness: parseFloat(document.getElementById('skinThickness').value),
+        Insulin: parseFloat(document.getElementById('insulin').value),
+        BMI: parseFloat(document.getElementById('bmi').value),
+        DiabetesPedigreeFunction: parseFloat(document.getElementById('dpf').value),
+        Age: parseInt(document.getElementById('age').value)
+      };
+
+      try {
+        const response = await fetch(`${API_BASE}/predict`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+          throw new Error('Server returned an error status.');
+        }
+
+        const result = await response.json();
+        
+        // Show result dashboard
+        document.getElementById('loading-view').style.display = 'none';
+        document.getElementById('results-view').style.display = 'block';
+        
+        // Populate and animate gauge
+        animateGauge(result.probability);
+        
+        // Update risk category and badges
+        const badge = document.getElementById('risk-badge');
+        badge.textContent = result.risk_category;
+        
+        if (result.risk_category === 'Non-Diabetic') {
+          badge.className = 'badge badge-healthy';
+          displayPanel.classList.add('healthy');
+        } else if (result.risk_category === 'At Risk') {
+          badge.className = 'badge badge-warning';
+          displayPanel.classList.add('warning');
+        } else {
+          badge.className = 'badge badge-danger';
+          displayPanel.classList.add('danger');
+        }
+
+        // Update progress bars
+        document.getElementById('val-rf').textContent = Math.round(result.rf_probability * 100) + '%';
+        document.getElementById('bar-rf').style.width = (result.rf_probability * 100) + '%';
+        
+        document.getElementById('val-gb').textContent = Math.round(result.gb_probability * 100) + '%';
+        document.getElementById('bar-gb').style.width = (result.gb_probability * 100) + '%';
+
+        // Load 7-Day AI Plan
+        fetchPlan(result.risk_category, data.Glucose, data.BMI, data.Age);
+
+      } catch (err) {
+        console.error(err);
+        document.getElementById('loading-view').style.display = 'none';
+        document.getElementById('empty-view').style.display = 'flex';
+        alert('Could not reach the prediction API server. Make sure backend/app.py is running on http://localhost:5000');
+      }
+    }
+
+    // Animate the circle gauge progress
+    function animateGauge(prob) {
+      const percentage = Math.round(prob * 100);
+      const textSpan = document.getElementById('risk-percentage');
+      const circle = document.getElementById('risk-gauge');
+      
+      // Calculate color
+      let color = 'var(--accent-green)';
+      if (prob >= 0.35 && prob < 0.65) {
+        color = 'var(--accent-orange)';
+      } else if (prob >= 0.65) {
+        color = 'var(--accent-red)';
+      }
+      
+      circle.style.stroke = color;
+
+      // Animate percentage text
+      let currentVal = 0;
+      const interval = setInterval(() => {
+        if (currentVal >= percentage) {
+          clearInterval(interval);
+          textSpan.textContent = percentage + '%';
+        } else {
+          currentVal++;
+          textSpan.textContent = currentVal + '%';
+        }
+      }, 10);
+
+      // Animate circle gauge stroke-dashoffset
+      const radius = 70;
+      const circumference = 2 * Math.PI * radius; // ~439.8
+      const offset = circumference - (prob * circumference);
+      
+      circle.style.strokeDashoffset = offset;
+    }
+
+    // Fetch Personalized Care Plan
+    async function fetchPlan(riskCategory, glucose, bmi, age) {
+      try {
+        const response = await fetch(`${API_BASE}/generate-plan`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            risk_category: riskCategory,
+            glucose: glucose,
+            bmi: bmi,
+            age: age
+          })
+        });
+
+        if (!response.ok) throw new Error("Plan generation failed");
+        
+        const plan = await response.json();
+        
+        // Show plan dashboard
+        document.getElementById('plan-section').style.display = 'block';
+        
+        // Inject metadata
+        document.getElementById('plan-title').textContent = plan.title || "Your Care Program";
+        document.getElementById('plan-summary').textContent = plan.summary || "Structured health guidelines.";
+        document.getElementById('plan-generator').textContent = plan.generator || "Rule-based Engine";
+        
+        // Inject pillars
+        populatePillarList('diet-pillars-list', plan.diet_tips);
+        populatePillarList('exercise-pillars-list', plan.exercise_tips);
+        
+        // Build Tabs & Schedule
+        activePlanSchedule = plan.schedule;
+        buildScheduleTabs(plan.schedule);
+        
+        // Show first day default
+        showDayPlan("Day 1");
+
+      } catch (err) {
+        console.error("Error loading care plan:", err);
+      }
+    }
+
+    function populatePillarList(elementId, tipsArray) {
+      const ul = document.getElementById(elementId);
+      ul.innerHTML = "";
+      if (!tipsArray || tipsArray.length === 0) {
+        ul.innerHTML = "<li>Maintain active lifestyle and check glucose regularly.</li>";
+        return;
+      }
+      tipsArray.forEach(tip => {
+        const li = document.createElement('li');
+        li.textContent = tip;
+        ul.appendChild(li);
+      });
+    }
+
+    function buildScheduleTabs(schedule) {
+      const tabBtnContainer = document.getElementById('tab-buttons');
+      tabBtnContainer.innerHTML = "";
+      
+      const days = Object.keys(schedule);
+      days.forEach((day, idx) => {
+        const btn = document.createElement('button');
+        btn.type = "button";
+        btn.className = "tab-btn" + (idx === 0 ? " active" : "");
+        btn.textContent = day;
+        btn.addEventListener('click', () => {
+          // Toggle active class
+          document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          showDayPlan(day);
+        });
+        tabBtnContainer.appendChild(btn);
+      });
+    }
+
+    function showDayPlan(dayKey) {
+      if (!activePlanSchedule || !activePlanSchedule[dayKey]) return;
+      
+      const dayData = activePlanSchedule[dayKey];
+      
+      // Inject Meals
+      document.getElementById('meal-breakfast').textContent = dayData.Diet.Breakfast;
+      document.getElementById('meal-lunch').textContent = dayData.Diet.Lunch;
+      document.getElementById('meal-snack').textContent = dayData.Diet.Snack;
+      document.getElementById('meal-dinner').textContent = dayData.Diet.Dinner;
+      
+      // Inject Exercise
+      document.getElementById('exercise-activity').textContent = dayData.Exercise;
+    }
+  </script>
+</body>
+</html>

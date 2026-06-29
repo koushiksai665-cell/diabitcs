@@ -1,0 +1,35 @@
+<!-- Add this inside diabetes_ai_v3.html, replacing the old in-browser JS prediction call -->
+<script>
+const API_BASE = "http://localhost:5000"; // change to your deployed URL later
+
+async function getPrediction(formData) {
+  try {
+    const response = await fetch(`${API_BASE}/predict`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        Pregnancies: Number(formData.pregnancies),
+        Glucose: Number(formData.glucose),
+        BloodPressure: Number(formData.bloodPressure),
+        SkinThickness: Number(formData.skinThickness),
+        Insulin: Number(formData.insulin),
+        BMI: Number(formData.bmi),
+        DiabetesPedigreeFunction: Number(formData.dpf), // from your 14-relative wizard
+        Age: Number(formData.age)
+      })
+    });
+
+    if (!response.ok) throw new Error("Prediction request failed");
+    const result = await response.json();
+    return result; // { probability, risk_category, rf_probability, gb_probability }
+
+  } catch (err) {
+    console.error("Error calling prediction API:", err);
+    alert("Could not reach the prediction server. Is app.py running?");
+  }
+}
+
+// Example usage when the user submits the form:
+// const result = await getPrediction(collectedFormData);
+// displayResult(result.risk_category, result.probability);
+</script>
