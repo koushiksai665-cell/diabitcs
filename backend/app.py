@@ -6,7 +6,7 @@ that diabetes_ai_v3.html (or any frontend) can call.
 """
 import joblib
 import numpy as np
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from ai_plan_generator import generate_plan
 
@@ -53,6 +53,13 @@ def predict():
         "rf_probability": round(float(rf_prob), 4),
         "gb_probability": round(float(gb_prob), 4)
     })
+
+
+@app.route("/", methods=["GET"])
+def index():
+    import os
+    frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
+    return send_from_directory(frontend_dir, "diabetes_ai_v3.html")
 
 
 @app.route("/health", methods=["GET"])
