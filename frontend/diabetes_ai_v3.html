@@ -1309,7 +1309,7 @@
               <circle class="gauge-fill" id="risk-gauge" cx="90" cy="90" r="70"></circle>
             </svg>
             <div class="gauge-text">
-              <div class="gauge-percentage" id="risk-percentage">0%</div>
+              <div class="gauge-percentage" id="risk-percentage">0.0000</div>
               <div class="gauge-label">Diabetes Risk</div>
             </div>
           </div>
@@ -1321,7 +1321,7 @@
             <div class="model-row">
               <div class="model-labels">
                 <span class="model-name">Random Forest (55% wt)</span>
-                <span class="model-val" id="val-rf">0%</span>
+                <span class="model-val" id="val-rf">0.0000</span>
               </div>
               <div class="progress-bar-bg">
                 <div class="progress-bar-fill" id="bar-rf" style="background-color: var(--primary);"></div>
@@ -1331,7 +1331,7 @@
             <div class="model-row">
               <div class="model-labels">
                 <span class="model-name">Gradient Boosting (45% wt)</span>
-                <span class="model-val" id="val-gb">0%</span>
+                <span class="model-val" id="val-gb">0.0000</span>
               </div>
               <div class="progress-bar-bg">
                 <div class="progress-bar-fill" id="bar-gb" style="background-color: var(--accent-green);"></div>
@@ -1673,10 +1673,10 @@
         }
 
         // Update progress bars
-        document.getElementById('val-rf').textContent = Math.round(result.rf_probability * 100) + '%';
+        document.getElementById('val-rf').textContent = result.rf_probability.toFixed(4);
         document.getElementById('bar-rf').style.width = (result.rf_probability * 100) + '%';
         
-        document.getElementById('val-gb').textContent = Math.round(result.gb_probability * 100) + '%';
+        document.getElementById('val-gb').textContent = result.gb_probability.toFixed(4);
         document.getElementById('bar-gb').style.width = (result.gb_probability * 100) + '%';
 
         // Load 7-Day AI Plan
@@ -1706,15 +1706,18 @@
       
       circle.style.stroke = color;
 
-      // Animate percentage text
-      let currentVal = 0;
+      // Animate numerical text
+      let stepCount = 0;
+      const steps = 100;
+      const targetVal = parseFloat(prob);
       const interval = setInterval(() => {
-        if (currentVal >= percentage) {
+        if (stepCount >= steps) {
           clearInterval(interval);
-          textSpan.textContent = percentage + '%';
+          textSpan.textContent = targetVal.toFixed(4);
         } else {
-          currentVal++;
-          textSpan.textContent = currentVal + '%';
+          stepCount++;
+          const currentDisplay = (targetVal * (stepCount / steps)).toFixed(4);
+          textSpan.textContent = currentDisplay;
         }
       }, 10);
 

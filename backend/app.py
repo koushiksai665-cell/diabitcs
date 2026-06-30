@@ -4,6 +4,7 @@ Flask backend for the AI-Based Diabetes Predictor.
 Loads diabetes_ensemble.pkl and exposes a single POST /predict endpoint
 that diabetes_ai_v3.html (or any frontend) can call.
 """
+import os
 import joblib
 import numpy as np
 from flask import Flask, request, jsonify, render_template
@@ -13,7 +14,9 @@ from ai_plan_generator import generate_plan
 app = Flask(__name__)
 CORS(app)  # allows the HTML file (different origin) to call this API
 
-bundle = joblib.load("diabetes_ensemble.pkl")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PICKLE_PATH = os.path.join(BASE_DIR, "diabetes_ensemble.pkl")
+bundle = joblib.load(PICKLE_PATH)
 rf_model = bundle["rf_model"]
 gb_model = bundle["gb_model"]
 scaler = bundle["scaler"]

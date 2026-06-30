@@ -3,12 +3,17 @@ train_model.py
 Trains the Random Forest + Gradient Boosting ensemble on the Pima Indians
 Diabetes Dataset and saves it as a single .pkl file the Flask API can load.
 """
+import os
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 import joblib
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PICKLE_PATH = os.path.join(BASE_DIR, "diabetes_ensemble.pkl")
+
 
 # 1. Load dataset directly — no Kaggle login needed, no manual download.
 #    Same Pima Indians Diabetes Dataset (768 rows, 8 features), just hosted
@@ -18,7 +23,7 @@ FEATURES = ["Pregnancies", "Glucose", "BloodPressure", "SkinThickness",
             "Insulin", "BMI", "DiabetesPedigreeFunction", "Age"]
 df = pd.read_csv(DATA_URL, header=None, names=FEATURES + ["Outcome"])
 
-X = df[FEATURES]
+X = df[FEATURES].copy()
 y = df["Outcome"]
 
 # 2. Clean implausible zeros (median imputation grouped by outcome)
@@ -53,6 +58,6 @@ joblib.dump({
     "scaler": scaler,
     "feature_order": FEATURES,
     "weights": {"rf": 0.55, "gb": 0.45}
-}, "diabetes_ensemble.pkl")
+}, PICKLE_PATH)
 
-print("Saved diabetes_ensemble.pkl")
+print(f"Saved {PICKLE_PATH}")
