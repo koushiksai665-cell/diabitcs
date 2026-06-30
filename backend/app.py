@@ -5,6 +5,11 @@ Loads diabetes_ensemble.pkl and exposes a single POST /predict endpoint
 that diabetes_ai_v3.html (or any frontend) can call.
 """
 import os
+import sys
+
+# Ensure the backend directory is in the Python path for Vercel serverless imports
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 import joblib
 import numpy as np
 from flask import Flask, request, jsonify, render_template

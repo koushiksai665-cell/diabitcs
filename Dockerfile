@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Copy requirements and install
 COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt gunicorn pandas
 
 # Copy all project files (frontend and backend)
 COPY . .
