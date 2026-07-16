@@ -1,0 +1,163 @@
+const nodemailer = require('nodemailer');
+const axios = require('axios');
+
+// =========================================================================
+// FEATURE 1: Send Prediction Report Email
+// =========================================================================
+app.post('/api/send-report', async (req, res) => {
+  try {
+    const { email, name, prediction, riskScore, inputs } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email address is required.' });
+    }
+
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT) || 587,
+      secure: false, // true for port 465
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    const isHighRisk = prediction === 'High Risk';
+    const accentColor = isHighRisk ? '#e53e3e' : '#319795';
+    const statusBg = isHighRisk ? '#fff5f5' : '#e6fffa';
+
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+        <div style="background-color: ${accentColor}; color: white; padding: 25px; text-align: center;">
+          <h2 style="margin: 0;">Diabetes Health Assessment</h2>
+        </div>
+        <div style="padding: 25px; color: #2d3748;">
+          <p><strong>Patient Name:</strong> ${name || 'Valued Patient'}</p>
+          <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+          
+          <div style="background-color: ${statusBg}; border-left: 4px solid ${accentColor}; padding: 15px; margin: 20px 0; text-align: center;">
+            <p style="margin: 0; font-size: 14px; color: #718096; text-transform: uppercase;">Assessment Result</p>
+            <h1 style="margin: 5px 0; color: ${accentColor};">${prediction}</h1>
+            <p style="margin: 0; font-weight: bold;">Risk Score: ${riskScore}%</p>
+          </div>
+
+          <h3>Clinical Indicators</h3>
+          <ul>
+            <li>Glucose: ${inputs.glucose} mg/dL</li>
+            <li>BMI: ${inputs.bmi} kg/m²</li>
+            <li>Age: ${inputs.age} years</li>
+            ${inputs.bp ? `<li>Blood Pressure: ${inputs.bp} mmHg</li>` : ''}
+          </ul>
+          
+          <p style="font-size: 11px; color: #a0aec0; margin-top: 30px; border-top: 1px solid #edf2f7; padding-top: 15px;">
+            <strong>Medical Disclaimer:</strong> This is an AI-generated assessment report. Please consult a medical professional for official diagnosis or treatment.
+          </p>
+        </div>
+      </div>
+    `;
+
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM,
+      to: email,
+      subject: `[${prediction}] Diabetes Risk Assessment - ${name || 'Patient'}`,
+      html: emailHtml,
+    });
+
+    return res.json({ success: true, message: 'Report email sent successfully.' });
+  } catch (error) {
+    console.error('Email Sending Error:', error);
+    return res.status(500).json({ error: 'Failed to send report email.' });
+  }
+});
+
+// =========================================================================
+// FEATURE 2: Fetch Nearby Hospitals using Google Maps Places API
+// =========================================================================
+app.get('/api/nearby-hospitals', async (req, res) => {
+  try {
+    const { lat, lng, address } = req.query;
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+
+    if (!apiKey) {
+      return res.status(500).json({ error: 'Google Maps API Key is missing.' });
+    }
+
+    let searchLatitude = lat;
+    let searchLongitude = lng;
+
+    // Fallback: Geocode address if GPS location coordinates are missing
+    if ((!searchLatitude || !searchLongitude) && address) {
+      const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`;
+      const geocodeRes = await axios.get(geocodeUrl);
+
+      if (geocodeRes.data.status === 'OK' && geocodeRes.data.results.length > 0) {
+        const location = geocodeRes.data.results[0].geometry.location;
+        searchLatitude = location.lat;
+        searchLongitude = location.lng;
+      } else {
+        return res.status(400).json({ error: 'Could not resolve manual location address.' });
+      }
+    }
+
+    if (!searchLatitude || !searchLongitude) {
+      return res.status(400).json({ error: 'Coordinates or search address required.' });
+    }
+
+    // Call Google Nearby Search API to locate hospitals
+    const radius = 8000; // 8km radius
+    const placesUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${searchLatitude},${searchLongitude}&radius=${radius}&type=hospital&keyword=hospital&key=${apiKey}`;
+    const placesRes = await axios.get(placesUrl);
+    const places = placesRes.data.results || [];
+
+    // Filter, sort by top rating, and fetch place details (to get phone numbers) for the top 5
+    const sortedPlaces = places
+      .filter(p => p.rating && p.rating >= 3.5)
+      .sort((a, b) => b.rating - a.rating)
+      .slice(0, 5);
+
+    // Haversine straight-line distance helper
+    const getDistance = (lat1, lon1, lat2, lon2) => {
+      const R = 6371; // Earth radius in km
+      const dLat = (lat2 - lat1) * (Math.PI / 180);
+      const dLon = (lon2 - lon1) * (Math.PI / 180);
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1*(Math.PI/180))*Math.cos(lat2*(Math.PI/180))*Math.sin(dLon/2)*Math.sin(dLon/2);
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    };
+
+    const detailedHospitals = await Promise.all(
+      sortedPlaces.map(async (place) => {
+        try {
+          const detailUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,rating,formatted_address,formatted_phone_number,geometry,url&key=${apiKey}`;
+          const detailRes = await axios.get(detailUrl);
+          if (detailRes.data.status === 'OK') {
+            const details = detailRes.data.result;
+            const distance = getDistance(
+              parseFloat(searchLatitude),
+              parseFloat(searchLongitude),
+              details.geometry.location.lat,
+              details.geometry.location.lng
+            );
+
+            return {
+              name: details.name,
+              rating: details.rating || place.rating,
+              address: details.formatted_address || place.vicinity,
+              phone: details.formatted_phone_number || 'Not Available',
+              distance: parseFloat(distance.toFixed(1)),
+              directionsUrl: details.url || `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(details.name)}&destination_place_id=${place.place_id}`
+            };
+          }
+        } catch (err) {
+          console.error(err);
+        }
+        return null;
+      })
+    );
+
+    const finalHospitals = detailedHospitals.filter(Boolean).sort((a, b) => a.distance - b.distance);
+    return res.json({ hospitals: finalHospitals });
+  } catch (error) {
+    console.error('Hospitals search error:', error);
+    return res.status(500).json({ error: 'Failed to retrieve nearby hospitals.' });
+  }
+});
