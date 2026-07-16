@@ -1,0 +1,187 @@
+import React, { useState, useEffect } from 'react';
+import { ShieldAlert, MapPin, Search, Navigation } from 'lucide-react'; // Replace with basic SVGs if needed
+
+export default function PredictionResult({ result }) {
+  const { email, name, prediction, riskScore, inputs } = result;
+  const isHighRisk = prediction === 'High Risk';
+
+  // State Variables
+  const [emailStatus, setEmailStatus] = useState('idle'); // sending, success, error
+  const [hospitals, setHospitals] = useState([]);
+  const [hospitalsLoading, setHospitalsLoading] = useState(false);
+  const [hospitalsError, setHospitalsError] = useState('');
+  const [manualLocation, setManualLocation] = useState('');
+  const [gpsDenied, setGpsDenied] = useState(false);
+
+  // ----------------------------------------------------
+  // Trigger 1: Auto-send Email report on mount
+  // ----------------------------------------------------
+  useEffect(() => {
+    const sendEmailReport = async () => {
+      setEmailStatus('sending');
+      try {
+        const res = await fetch('http://localhost:5000/api/send-report', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, name, prediction, riskScore, inputs }),
+        });
+        if (!res.ok) throw new Error();
+        setEmailStatus('success');
+      } catch {
+        setEmailStatus('error');
+      }
+    };
+    sendEmailReport();
+  }, [result]);
+
+  // ----------------------------------------------------
+  // Trigger 2: Locate nearby hospitals if High Risk
+  // ----------------------------------------------------
+  useEffect(() => {
+    if (isHighRisk) {
+      getGpsLocation();
+    }
+  }, [isHighRisk]);
+
+  const getGpsLocation = () => {
+    setHospitalsLoading(true);
+    setHospitalsError('');
+    setGpsDenied(false);
+
+    if (!navigator.geolocation) {
+      setGpsDenied(true);
+      setHospitalsLoading(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        fetchNearbyHospitals(pos.coords.latitude, pos.coords.longitude, null);
+      },
+      () => {
+        setGpsDenied(true);
+        setHospitalsLoading(false);
+        setHospitalsError('Location access denied. Please type your location manually below.');
+      }
+    );
+  };
+
+  const fetchNearbyHospitals = async (lat, lng, address) => {
+    setHospitalsLoading(true);
+    setHospitalsError('');
+    try {
+      let query = '';
+      if (lat && lng) query = `lat=${lat}&lng=${lng}`;
+      else if (address) query = `address=${encodeURIComponent(address)}`;
+
+      const res = await fetch(`http://localhost:5000/api/nearby-hospitals?${query}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setHospitals(data.hospitals);
+      if (data.hospitals.length === 0) {
+        setHospitalsError('No high-rated specialty hospitals found near this area.');
+      }
+    } catch (err) {
+      setHospitalsError(err.message || 'Error finding nearby hospitals.');
+    } finally {
+      setHospitalsLoading(false);
+    }
+  };
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: isHighRisk ? '1fr 1fr' : '1fr', gap: '24px', padding: '20px' }}>
+      
+      {/* Risk Output Display Card */}
+      <div className="card" style={{ padding: '20px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+        <h2>Result: <span style={{ color: isHighRisk ? '#e53e3e' : '#319795' }}>{prediction}</span></h2>
+        <h3>Risk Score: {riskScore}%</h3>
+        
+        {/* Email Status Indicator */}
+        <div style={{ marginTop: '15px', padding: '10px', background: '#f7fafc', borderRadius: '6px', fontSize: '13px' }}>
+          {emailStatus === 'sending' && "📧 Sending report to your email..."}
+          {emailStatus === 'success' && `✅ Report successfully emailed to: ${email}`}
+          {emailStatus === 'error' && "❌ Email failed to send. Check server configuration."}
+        </div>
+      </div>
+
+      {/* Emergency & Nearby Hospitals Section */}
+      {isHighRisk && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          
+          {/* Emergency Box */}
+          <div style={{ padding: '16px', background: '#fff5f5', borderLeft: '4px solid #e53e3e', borderRadius: '6px' }}>
+            <h3 style={{ color: '#e53e3e', margin: '0 0 6px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <ShieldAlert size={20} /> Emergency Consultation Message
+            </h3>
+            <p style={{ margin: 0, fontSize: '14px', color: '#4a5568' }}>
+              Your biomarkers indicate high risk. We highly recommend booking an urgent consultation with an endocrinologist.
+            </p>
+          </div>
+
+          {/* Places API Hospital Container */}
+          <div style={{ padding: '20px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+            <h3 style={{ margin: '0 0 15px 0' }}>Find Specialty Hospitals Nearby</h3>
+
+            {/* Fallback Manual Search Bar */}
+            {gpsDenied && (
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '15px' }}>
+                <input
+                  type="text"
+                  placeholder="Enter City or Zip code..."
+                  value={manualLocation}
+                  onChange={(e) => setManualLocation(e.target.value)}
+                  style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                />
+                <button 
+                  onClick={() => fetchNearbyHospitals(null, null, manualLocation)}
+                  style={{ padding: '8px 12px', background: '#e53e3e', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                >
+                  <Search size={16} />
+                </button>
+              </div>
+            )}
+
+            {/* Hospitals List */}
+            <div style={{ maxHeight: '350px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {hospitalsLoading && <p>Locating 5-star multi-specialty centers...</p>}
+              
+              {!hospitalsLoading && hospitalsError && (
+                <p style={{ fontSize: '13px', color: '#e53e3e' }}>{hospitalsError}</p>
+              )}
+
+              {!hospitalsLoading && hospitals.map((hosp, idx) => (
+                <div key={idx} style={{ padding: '12px', border: '1px solid #f1f5f9', borderRadius: '6px', background: '#fafafa' }}>
+                  <h4 style={{ margin: '0 0 4px 0' }}>{hosp.name} ({hosp.rating} ★)</h4>
+                  <p style={{ margin: '0 0 4px 0', fontSize: '12px', color: '#64748b' }}><MapPin size={12} /> {hosp.address} ({hosp.distance} km away)</p>
+                  <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: '#64748b' }}>📞 Phone: {hosp.phone}</p>
+                  
+                  <a 
+                    href={hosp.directionsUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    style={{ 
+                      display: 'inline-flex', 
+                      alignItems: 'center', 
+                      gap: '4px', 
+                      fontSize: '12px', 
+                      color: 'white', 
+                      background: '#e53e3e', 
+                      padding: '6px 12px', 
+                      textDecoration: 'none', 
+                      borderRadius: '4px',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    <Navigation size={12} /> Navigate
+                  </a>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      )}
+    </div>
+  );
+}
